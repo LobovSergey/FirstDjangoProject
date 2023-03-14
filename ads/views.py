@@ -1,14 +1,13 @@
-import os
+import json
 
-from django.http import JsonResponse, HttpRequest, HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
 from django.views import View
-from datasets.stretch_data import read_files
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import DetailView
 
 from ads.models import Announcement, Categories
-
-ADS_FILE = os.path.abspath('../datasets/ads.csv')
-CATEGORIES_FILE = os.path.abspath('../datasets/categories.csv')
 
 
 class ADSView(View):
@@ -16,20 +15,88 @@ class ADSView(View):
         return JsonResponse({"status": "ok"}, status=200)
 
 
-class DataView(View):
+@method_decorator(csrf_exempt, name="dispatch")
+class AnnouncementView(View):
     def get(self, request):
-        announcement_object = Announcement()
-        category_object = Categories()
-        announcement_data = read_files(ADS_FILE)
-        category_data = read_files(CATEGORIES_FILE)
-        for announcement in announcement_data:
-            announcement_object.name = announcement["name"]
-            announcement_object.author = announcement['author']
-            announcement_object.price = announcement['price']
-            announcement_object.is_published = announcement['is_published']
-            announcement_object.address = announcement['address']
-            announcement_object.save()
-        for category in category_data:
-            category_object.name = category['name']
-            category_object.save()
-        return HttpResponse('Data added')
+        result = Announcement.objects.all()
+        response = [
+            {
+                "id": dictionary.id,
+                "name": dictionary.name,
+                "author": dictionary.author,
+                "price": dictionary.price,
+                "description": dictionary.description,
+                "is_published": dictionary.is_published,
+                "address": dictionary.address
+            }
+            for dictionary in result
+        ]
+        return JsonResponse(response, safe=False, status=200)
+
+    def post(self, request):
+        data_result = json.loads(request.body)
+        announcement = Announcement()
+        announcement.name = data_result["name"]
+        announcement.author = data_result["author"]
+        announcement.price = data_result["price"]
+        announcement.description = data_result["description"]
+        announcement.is_published = data_result["is_published"]
+        announcement.address = data_result["address"]
+        announcement.save()
+        return JsonResponse(data_result, safe=False, status=200)
+
+
+class AnnouncementDetailView(DetailView):
+    model = Announcement
+
+    def get(self, request, *args, **kwargs):
+        try:
+            announcement = self.get_object()
+            return JsonResponse(
+                {
+                    "id": announcement.id,
+                    "name": announcement.name,
+                    "author": announcement.author,
+                    "price": announcement.price,
+                    "description": announcement.description,
+                    "is_published": announcement.is_published,
+                    "address": announcement.address
+                }, status=200)
+        except Exception:
+            return JsonResponse({"error": "Not found"}, status=404)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CategoriesView(View):
+    def get(self, request):
+        result = Categories.objects.all()
+        response = [
+            {
+                "id": dictionary.id,
+                "name": dictionary.name,
+            }
+            for dictionary in result
+        ]
+        return JsonResponse(response, safe=False, status=200)
+
+    def post(self, request):
+        data_result = json.loads(request.body)
+        announcement = Categories()
+        announcement.name = data_result["name"]
+        announcement.save()
+        return JsonResponse(data_result, safe=False, status=200)
+
+
+class CategoryDetailView(DetailView):
+    model = Categories
+
+    def get(self, request, *args, **kwargs):
+        try:
+            category = self.get_object()
+            return JsonResponse(
+                {
+                    "id": category.id,
+                    "name": category.name,
+                }, status=200)
+        except Exception:
+            return JsonResponse({"error": "Not found"}, status=404)
