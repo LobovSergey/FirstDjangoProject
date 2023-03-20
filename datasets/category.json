@@ -1,0 +1,1 @@
+[{"model": "ads.categories", "pk": "1", "fields": {"name": "Котики"}}, {"model": "ads.categories", "pk": "2", "fields": {"name": "Песики"}}, {"model": "ads.categories", "pk": "3", "fields": {"name": "Книги"}}, {"model": "ads.categories", "pk": "4", "fields": {"name": "Растения"}}, {"model": "ads.categories", "pk": "5", "fields": {"name": "Мебель и интерьер"}}]
