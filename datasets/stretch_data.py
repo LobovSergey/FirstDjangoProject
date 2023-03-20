@@ -3,6 +3,16 @@ import json
 import os
 
 NAME_PROJECT = 'ads.'
+AD_CSV = os.path.abspath('ad.csv')
+AD_JSON = os.path.abspath('ad.json')
+CATEGORY_CSV = os.path.abspath('category.csv')
+CATEGORY_JSON = os.path.abspath('category.json')
+LOCATION_CSV = os.path.abspath('location.csv')
+LOCATION_JSON = os.path.abspath('location.json')
+USER_CSV = os.path.abspath('user.csv')
+USER_JSON = os.path.abspath('user.json')
+FILES_FOR_CONVERTATION = [(AD_CSV, AD_JSON), (CATEGORY_CSV, CATEGORY_JSON), (LOCATION_CSV, LOCATION_JSON),
+                          (USER_CSV, USER_JSON)]
 
 
 class Convertation:
@@ -23,7 +33,7 @@ class Convertation:
             return f'No data file'
 
     def _correct_dict(self, data, csv_name):
-        if csv_name == 'ads':
+        if csv_name == 'ad':
             return [
                 {
                     "model": NAME_PROJECT + "announcement",
@@ -31,16 +41,18 @@ class Convertation:
                     "fields":
                         {
                             "name": dictionary["name"],
-                            "author": dictionary["author"],
+                            "author_id": dictionary["author_id"],
                             "price": int(dictionary["price"]),
                             "description": dictionary["description"],
                             "is_published": self._bool_convertation(dictionary["is_published"]),
-                            "address": dictionary["address"]
+                            "image": dictionary["image"],
+                            "category_id": dictionary["category_id"]
+
                         }
                 }
                 for dictionary in data
             ]
-        else:
+        elif csv_name == 'category':
             return [
                 {
                     "model": NAME_PROJECT + "categories",
@@ -48,6 +60,38 @@ class Convertation:
                     "fields":
                         {
                             "name": dictionary["name"]
+                        }
+                }
+                for dictionary in data
+            ]
+        elif csv_name == 'location':
+            return [
+                {
+                    "model": NAME_PROJECT + "location",
+                    "pk": dictionary["id"],
+                    "fields":
+                        {
+                            "name": dictionary["name"],
+                            "lat": dictionary["lat"],
+                            "lng": dictionary["lng"]
+                        }
+                }
+                for dictionary in data
+            ]
+        else:
+            return [
+                {
+                    "model": NAME_PROJECT + "user",
+                    "pk": dictionary["id"],
+                    "fields":
+                        {
+                            "first_name": dictionary["first_name"],
+                            "last_name": dictionary["last_name"],
+                            "username": dictionary["username"],
+                            "password": dictionary["password"],
+                            "role": dictionary["role"],
+                            "age": dictionary["age"],
+                            "location_id": dictionary["location_id"]
                         }
                 }
                 for dictionary in data
@@ -63,7 +107,6 @@ class Convertation:
         return filename[0]
 
 
-first_convertation = Convertation(os.path.abspath('ads.csv'), os.path.abspath('ads.json'))
-first_convertation.csv_to_json()
-second_convertation = Convertation(os.path.abspath('categories.csv'), os.path.abspath('categories.json'))
-second_convertation.csv_to_json()
+for pair in FILES_FOR_CONVERTATION:
+    convertation = Convertation(pair[0], pair[1])
+    convertation.csv_to_json()

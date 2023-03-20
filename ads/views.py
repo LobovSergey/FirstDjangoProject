@@ -1,11 +1,11 @@
 import json
 
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import DetailView
+from django.views.generic import DetailView, ListView
 
 from ads.models import Announcement, Categories
 
@@ -16,22 +16,28 @@ class ADSView(View):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class AnnouncementView(View):
-    def get(self, request):
-        result = Announcement.objects.all()
+class AnnouncementView(ListView):
+    model = Announcement
+
+    def get(self, request, *args, **kwargs):
+        super().get(request, *args, **kwargs)
+        search_result = self.object_list.get('category_id', None)
+        if search_result:
+            self.object_list = self.object_list.filter(id=search_result)
         response = [
             {
-                "id": dictionary.id,
-                "name": dictionary.name,
-                "author": dictionary.author,
-                "price": dictionary.price,
-                "description": dictionary.description,
-                "is_published": dictionary.is_published,
-                "address": dictionary.address
-            }
-            for dictionary in result
+                "name": announcement.name,
+                'author': announcement.author,
+                'price': announcement.price,
+                'description': announcement.description,
+                'is_published': announcement.is_published,
+                'image': announcement.image,
+                'author_id': announcement.author_id,
+                'category_id': announcement.category_id
+
+            } for announcement in self.object_list
         ]
-        return JsonResponse(response, safe=False, status=200)
+        return JsonResponse(response, safe=False)
 
     def post(self, request):
         data_result = json.loads(request.body)
@@ -43,7 +49,7 @@ class AnnouncementView(View):
         announcement.is_published = data_result["is_published"]
         announcement.address = data_result["address"]
         announcement.save()
-        return JsonResponse(data_result, safe=False, status=200)
+        return JsonResponse(data_result, safe=True, status=200)
 
 
 class AnnouncementDetailView(DetailView):
@@ -62,7 +68,7 @@ class AnnouncementDetailView(DetailView):
                     "is_published": announcement.is_published,
                     "address": announcement.address
                 }, status=200)
-        except Exception:
+        except Announcement.DoesNotExist:
             return JsonResponse({"error": "Not found"}, status=404)
 
 
