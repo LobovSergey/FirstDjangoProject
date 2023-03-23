@@ -2,7 +2,12 @@ import csv
 import json
 import os
 
-NAME_PROJECT = 'ads.'
+NAME_PROJECT = {
+    "ad": "ads.",
+    "category": "categories.",
+    "location": "locations.",
+    "user": "user."
+}
 AD_CSV = os.path.abspath('ad.csv')
 AD_JSON = os.path.abspath('ad.json')
 CATEGORY_CSV = os.path.abspath('category.csv')
@@ -36,7 +41,7 @@ class Convertation:
         if csv_name == 'ad':
             return [
                 {
-                    "model": NAME_PROJECT + "announcement",
+                    "model": NAME_PROJECT[csv_name] + "announcement",
                     "pk": int(dictionary["Id"]),
                     "fields":
                         {
@@ -55,7 +60,7 @@ class Convertation:
         elif csv_name == 'category':
             return [
                 {
-                    "model": NAME_PROJECT + "categories",
+                    "model": NAME_PROJECT[csv_name] + "categories",
                     "pk": dictionary["id"],
                     "fields":
                         {
@@ -67,7 +72,7 @@ class Convertation:
         elif csv_name == 'location':
             return [
                 {
-                    "model": NAME_PROJECT + "location",
+                    "model": NAME_PROJECT[csv_name] + "location",
                     "pk": dictionary["id"],
                     "fields":
                         {
@@ -81,7 +86,7 @@ class Convertation:
         else:
             return [
                 {
-                    "model": NAME_PROJECT + "user",
+                    "model": NAME_PROJECT[csv_name] + "user",
                     "pk": dictionary["id"],
                     "fields":
                         {

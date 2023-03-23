@@ -1,13 +1,13 @@
 import json
 
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
 
-from ads.models import Announcement, Categories
+from ads.models import Announcement
 
 
 class ADSView(View):
@@ -15,41 +15,25 @@ class ADSView(View):
         return JsonResponse({"status": "ok"}, status=200)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class AnnouncementView(ListView):
     model = Announcement
 
     def get(self, request, *args, **kwargs):
         super().get(request, *args, **kwargs)
-        search_result = self.object_list.get('category_id', None)
-        if search_result:
-            self.object_list = self.object_list.filter(id=search_result)
-        response = [
+        search_data = request.GET.get('price', None)
+        if search_data:
+            self.object_list = self.object_list.filter(price=search_data)
+        result = [
             {
-                "name": announcement.name,
-                'author': announcement.author,
-                'price': announcement.price,
+                'id': announcement.id,
+                'name': announcement.name,
                 'description': announcement.description,
-                'is_published': announcement.is_published,
-                'image': announcement.image,
+                'price': announcement.price,
                 'author_id': announcement.author_id,
-                'category_id': announcement.category_id
-
+                'category_id': announcement.category_id,
             } for announcement in self.object_list
         ]
-        return JsonResponse(response, safe=False)
-
-    def post(self, request):
-        data_result = json.loads(request.body)
-        announcement = Announcement()
-        announcement.name = data_result["name"]
-        announcement.author = data_result["author"]
-        announcement.price = data_result["price"]
-        announcement.description = data_result["description"]
-        announcement.is_published = data_result["is_published"]
-        announcement.address = data_result["address"]
-        announcement.save()
-        return JsonResponse(data_result, safe=True, status=200)
+        return JsonResponse(result, safe=False)
 
 
 class AnnouncementDetailView(DetailView):
@@ -60,49 +44,86 @@ class AnnouncementDetailView(DetailView):
             announcement = self.get_object()
             return JsonResponse(
                 {
-                    "id": announcement.id,
-                    "name": announcement.name,
-                    "author": announcement.author,
-                    "price": announcement.price,
-                    "description": announcement.description,
-                    "is_published": announcement.is_published,
-                    "address": announcement.address
+                    'id': announcement.id,
+                    'name': announcement.name,
+                    'description': announcement.description,
+                    'price': announcement.price,
+                    'author_id': announcement.author_id,
+                    'category_id': announcement.category_id,
+
                 }, status=200)
-        except Announcement.DoesNotExist:
-            return JsonResponse({"error": "Not found"}, status=404)
+
+        except Exception:
+            return JsonResponse({"error": "Not found"}, safe=False, status=404)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class CategoriesView(View):
-    def get(self, request):
-        result = Categories.objects.all()
-        response = [
+class AnnouncementCreateView(CreateView):
+    model = Announcement
+    fields = ['name', 'price', 'description', 'author_id', 'category_id']
+
+    def post(self, request, *args, **kwargs):
+        announcement_data = json.loads(request.body)
+        announcement = Announcement.objects.create(
+            name=announcement_data["name"],
+            price=announcement_data["price"],
+            description=announcement_data["description"],
+            author_id=announcement_data["author_id"],
+            category_id=announcement_data["category_id"]
+        )
+        return JsonResponse({"status": "created",
+                             "id": announcement.id,
+                             "name": announcement.name,
+                             "description": announcement.description}, safe=False)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class AnnouncementUpdateView(UpdateView):
+    model = Announcement
+    fields = ['name', 'price', 'description']
+
+    def patch(self, request, *args, **kwargs):
+        super().post(request, *args, **kwargs)
+        announcement_data = json.loads(request.body)
+        self.object.name = announcement_data["name"]
+        self.object.description = announcement_data["description"]
+        self.object.price = announcement_data["price"]
+        self.object.author_id = announcement_data["author_id"]
+        self.object.category_id = announcement_data["category_id"]
+        self.object.save()
+        return JsonResponse({"status": "edited",
+                             "id": self.object.id,
+                             "name": self.object.name,
+                             "description": self.object.description,
+                             "author_id": self.object.author_id,
+                             "category_id": self.object.category_id}, safe=False)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class AnnouncementDeleteView(DeleteView):
+    model = Announcement
+    success_url = "/"
+
+    def delete(self, request, *args, **kwargs):
+        super().delete(request, *args, **kwargs)
+        return JsonResponse(
             {
-                "id": dictionary.id,
-                "name": dictionary.name,
+                "status": "deleted"
             }
-            for dictionary in result
-        ]
-        return JsonResponse(response, safe=False, status=200)
-
-    def post(self, request):
-        data_result = json.loads(request.body)
-        announcement = Categories()
-        announcement.name = data_result["name"]
-        announcement.save()
-        return JsonResponse(data_result, safe=False, status=200)
+        )
 
 
-class CategoryDetailView(DetailView):
-    model = Categories
+@method_decorator(csrf_exempt, name="dispatch")
+class AnnouncementUploadImageView(UpdateView):
+    model = Announcement
+    fields = ['image']
 
-    def get(self, request, *args, **kwargs):
-        try:
-            category = self.get_object()
-            return JsonResponse(
-                {
-                    "id": category.id,
-                    "name": category.name,
-                }, status=200)
-        except Exception:
-            return JsonResponse({"error": "Not found"}, status=404)
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.image = request.FILES['image']
+        self.object.save()
+        return JsonResponse(
+            {
+                "image": self.object.image.url if self.object.image else None
+            }
+        )
