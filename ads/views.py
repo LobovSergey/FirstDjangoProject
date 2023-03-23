@@ -1,5 +1,7 @@
 import json
 
+from django.conf import settings
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 
 from django.utils.decorators import method_decorator
@@ -23,7 +25,12 @@ class AnnouncementView(ListView):
         search_data = request.GET.get('price', None)
         if search_data:
             self.object_list = self.object_list.filter(price=search_data)
-        result = [
+
+        paginator = Paginator(self.object_list, settings.TOTAL_ON_PAGE)
+        page_number = request.GET.get("page")
+        page_object = paginator.get_page(page_number)
+
+        data_announcement = [
             {
                 'id': announcement.id,
                 'name': announcement.name,
@@ -31,8 +38,15 @@ class AnnouncementView(ListView):
                 'price': announcement.price,
                 'author_id': announcement.author_id,
                 'category_id': announcement.category_id,
-            } for announcement in self.object_list
+            } for announcement in page_object
         ]
+
+        result = {
+            "items": data_announcement,
+            "total": paginator.count,
+            "num_pages": paginator.num_pages
+        }
+
         return JsonResponse(result, safe=False)
 
 
