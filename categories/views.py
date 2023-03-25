@@ -73,6 +73,7 @@ class CategoryUpdateView(UpdateView):
             "name": self.object.name
         }, safe=False)
 
+
 @method_decorator(csrf_exempt, name="dispatch")
 class CategoryDeleteView(DeleteView):
     model = Categories

@@ -8,5 +8,6 @@ urlpatterns = [
     path('', ADSView.as_view()),
     path('ad/', include('ads.urls')),
     path('cat/', include('categories.urls')),
+    path('user/', include('user.urls')),
 
 ]
