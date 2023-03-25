@@ -33,7 +33,8 @@ class UserView(ListView):
                 'last_name': user.last_name,
                 'role': user.role,
                 'age': user.age,
-                'locations': user.location_id.name.split(', ')
+                'location': [loc.name for loc in user.location.all()]
+
             } for user in page_object
         ]
 
@@ -41,6 +42,7 @@ class UserView(ListView):
             "items": data_user,
             "total": paginator.count,
             "num_pages": paginator.num_pages
+
         }
 
         return JsonResponse(result, safe=False)
@@ -60,7 +62,7 @@ class UserDetailView(DetailView):
                     'last_name': user.last_name,
                     'role': user.role,
                     'age': user.age,
-                    'locations': user.location_id.name.split(', ')
+                    'location': [loc.name for loc in user.location.all()]
                 }, status=200)
 
         except Exception:
@@ -74,6 +76,7 @@ class UserCreateView(CreateView):
 
     def post(self, request, *args, **kwargs):
         user_data = json.loads(request.body)
+        data_location = user_data.pop("location")
         user = User.objects.create(
             username=user_data["username"],
             first_name=user_data["first_name"],
@@ -81,16 +84,18 @@ class UserCreateView(CreateView):
             role=user_data["role"],
             age=user_data["age"])
 
-        for loc in user_data["location_id"]:
-            location_object, created = Location.objects.get_or_create(name=loc)
-        user.location_id.add(location_object)
+        for location in data_location:
+            loca, _ = Location.objects.get_or_create(name=location)
+            user.location.add(loca)
 
-        user.save()
         return JsonResponse({"status": "created",
                              "id": user.id,
                              "username": user.username,
                              "last_name": user.last_name,
-                             "total_ads": Counnt}, safe=False)
+                             "location": [loc.name for loc in user.location.all()]
+                             # "total_ads": Count(s)
+                             },
+                            safe=False)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -101,12 +106,16 @@ class UserUpdateView(UpdateView):
     def patch(self, request, *args, **kwargs):
         super().post(request, *args, **kwargs)
         user_data = json.loads(request.body)
+
         self.object.username = user_data["username"]
         self.object.first_name = user_data["first_name"]
         self.object.last_name = user_data["last_name"]
         self.object.role = user_data["role"]
         self.object.age = user_data["age"]
-        self.object.locations_id = user_data["locations_id"]
+        self.object.location.all().delete()
+        for location in user_data.get('location'):
+            loca, _ = Location.objects.get_or_create(name=location)
+            self.object.location.add(loca)
         self.object.save()
         return JsonResponse({"status": "edited",
                              "id": self.object.id,
@@ -115,7 +124,8 @@ class UserUpdateView(UpdateView):
                              "last_name": self.object.last_name,
                              "role": self.object.role,
                              "age": self.object.age,
-                             "locations": self.object.locations_id}, safe=False)
+                             "locations": [loc.name for loc in self.object.location.all()]},
+                            safe=False)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

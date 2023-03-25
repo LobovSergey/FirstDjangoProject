@@ -2,7 +2,10 @@ import json
 
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.db.models import Count, Sum
+
 from django.http import JsonResponse
+from django.shortcuts import get_list_or_404
 
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -24,7 +27,9 @@ class AnnouncementView(ListView):
         super().get(request, *args, **kwargs)
         search_data = request.GET.get('price', None)
         if search_data:
-            self.object_list = self.object_list.filter(price=search_data)
+            self.object_list = get_list_or_404(self.object_list, price=search_data)
+
+        self.object_list = self.object_list.select_related("author")
 
         paginator = Paginator(self.object_list, settings.TOTAL_ON_PAGE)
         page_number = request.GET.get("page")
@@ -37,12 +42,15 @@ class AnnouncementView(ListView):
                 'description': announcement.description,
                 'price': announcement.price,
                 'author_id': announcement.author_id,
-                'category_id': announcement.category_id,
+                'category_id': announcement.category_id
+
             } for announcement in page_object
         ]
 
         result = {
             "items": data_announcement,
+            'total_ads': Announcement.objects.filter(is_published=True).aggregate(Count('is_published'))[
+                "is_published__count"],
             "total": paginator.count,
             "num_pages": paginator.num_pages
         }

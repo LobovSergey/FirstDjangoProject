@@ -96,7 +96,7 @@ class Convertation:
                             "password": dictionary["password"],
                             "role": dictionary["role"],
                             "age": dictionary["age"],
-                            "location_id": dictionary["location_id"]
+                            "location": [dictionary["location_id"]]
                         }
                 }
                 for dictionary in data
